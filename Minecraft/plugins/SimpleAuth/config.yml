@@ -1,0 +1,8 @@
+supervisor:
+  url: "http://127.0.0.1:5001/"   # your external app endpoint that accepts JSON POST
+  retries: 3
+  timeoutSeconds: 5
+
+local:
+  bind: "127.0.0.1"
+  port: 27111

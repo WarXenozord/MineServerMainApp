@@ -1,3 +1,6 @@
+import dotenv from "dotenv";
+dotenv.config({ path: process.env.NODE_ENV === "production" ? "/etc/msu/.env" : "./.env" });
+
 import express from "express";
 import crypto from "crypto";
 
@@ -9,7 +12,7 @@ let isRunning = true;
 let bootStart = 0;
 
 // --- your secret (shared with Auth Server only) ---
-const AUTH_SECRET = process.env.AUTH_SECRET || "dev-super-secret"; // replace in production
+const AUTH_SECRET = process.env.AUTH_SECRET || "dev-super-secret"; 
 
 // Utility: simple auth header check
 function verifyAuth(req, res, next) {
@@ -95,4 +98,4 @@ app.post("/deauthorize", requireLocalhost, async (req, res) => {
 });
 
 // --- SERVER LISTENER ---
-app.listen(5001, () => console.log("🧩 MineSupervisor mock listening on port 5001"));
+app.listen(process.env.PORT, () => console.log("🧩 MineSupervisor mock listening on port 5001"));
