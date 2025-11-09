@@ -23,23 +23,11 @@ public class LocalApiServer {
     }
 
     private void handleOnline(HttpExchange ex) throws IOException {
-        // simple auth check
-        String header = ex.getRequestHeaders().getFirst("X-API-Key");
-        if (apiKey != null && !apiKey.isEmpty()) {
-            if (header == null || !header.equals(apiKey)) {
-                byte[] b = "Unauthorized".getBytes();
-                ex.sendResponseHeaders(401, b.length);
-                ex.getResponseBody().write(b);
-                ex.close();
-                return;
-            }
-        }
-
         JSONArray arr = new JSONArray();
         for (Player p : Bukkit.getOnlinePlayers()) {
             JSONObject o = new JSONObject();
             String authUser = ((SimpleAuth) plugin).getUserManager().getAuthUser(p);
-            o.put("name", authUser != null ? authUser : p.getName())
+            o.put("name", authUser != null ? authUser : p.getName());
             var addr = p.getAddress();
             o.put("ip", addr == null ? "" : addr.getAddress().getHostAddress());
             arr.put(o);

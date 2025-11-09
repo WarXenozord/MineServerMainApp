@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 public class UserManager {
     private final SimpleAuth plugin;
@@ -47,6 +48,12 @@ public class UserManager {
 
     public void setAuthenticated(Player p, String user) {
         authenticated.put(p.getUniqueId().toString(), user);
+        String ip = p.getAddress().getAddress().getHostAddress();
+        plugin.onPlayerLogged(p.getUniqueId(), ip , user);
+    }
+
+    public void unsetAuthenticated(String uuid) {
+        authenticated.remove(uuid);
     }
 
     public boolean isAuthenticated(Player p) {
@@ -55,6 +62,10 @@ public class UserManager {
 
     public String getAuthUser(Player p) {
         return authenticated.get(p.getUniqueId().toString());
+    }
+
+    public String getAuthUserFromID(UUID id) {
+        return authenticated.get(id.toString());
     }
 
     public void savePlayerData(Player p) {
@@ -69,7 +80,12 @@ public class UserManager {
         String inv = data.getString("users." + user + ".inventory");
         String loc = data.getString("users." + user + ".lastLocation");
         if (inv != null) InventoryUtils.fromBase64(p.getInventory(), inv);
-        if (loc != null) p.teleport(deserializeLocation(loc));
+        if (loc != null) 
+            p.teleport(deserializeLocation(loc));
+        else
+            p.teleport(plugin.getServer().getWorlds().get(0).getSpawnLocation());
+        p.setFlying(false);
+        p.setAllowFlight(false);
     }
 
     public void saveAll() {

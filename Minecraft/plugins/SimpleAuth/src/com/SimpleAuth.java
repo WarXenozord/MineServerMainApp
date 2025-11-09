@@ -55,25 +55,28 @@ public class SimpleAuth extends JavaPlugin {
 
     private void pollPlayers() {
         Map<UUID, String> currentOnlineIps = new HashMap<>(); 
-        for (Player player : Bukkit.getOnlinePlayers()) { 
-            InetSocketAddress address = player.getAddress(); 
-            if (address != null) { 
-                String ip = address.getAddress().getHostAddress(); 
-                currentOnlineIps.put(player.getUniqueId(), ip); 
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            InetSocketAddress address = player.getAddress();
+            if (address != null) {
+                String ip = address.getAddress().getHostAddress();
+                currentOnlineIps.put(player.getUniqueId(), ip);
                 
-                // New player connected 
-                if (!onlinePlayerIps.containsKey(player.getUniqueId())) { 
-                    onPlayerConnected(player.getUniqueId(), ip); 
-                } 
-            } 
-        } 
-            
-        // Detect disconnected players 
-        for (UUID uuid : onlinePlayerIps.keySet()) { 
-            if (!currentOnlineIps.containsKey(uuid)) { 
-                onPlayerDisconnected(uuid, onlinePlayerIps.get(uuid)); 
-            } 
-        } 
+                // New player connected
+                if (!onlinePlayerIps.containsKey(player.getUniqueId())) {
+                    onPlayerConnected(player.getUniqueId(), ip);
+                }
+            }
+        }
+
+        // Detect disconnected players
+        for (UUID uuid : onlinePlayerIps.keySet()) {
+            if (!currentOnlineIps.containsKey(uuid)) {
+                // Retrieve the username for the disconnecting player
+                Player player = Bukkit.getPlayer(uuid);
+                String authUser = this.getUserManager().getAuthUserFromID(uuid);
+                onPlayerDisconnected(uuid, onlinePlayerIps.get(uuid), authUser);
+            }
+        }
         
         // Update snapshot 
         onlinePlayerIps.clear(); 
@@ -81,12 +84,18 @@ public class SimpleAuth extends JavaPlugin {
     }
 
     private void onPlayerConnected(UUID uuid, String ip) {
-        getLogger().info("Player connected: " + uuid + " @ " + ip);
+        getLogger().info("Player connected: " +  uuid + " @ " + ip);
+    }
+
+    public void onPlayerLogged(UUID uuid, String ip, String authUser) {
+        getLogger().info("Player logged: " + authUser + "(" +  uuid + ") @ " + ip);
         // TODO: Call your local proxy/whitelist app here
     }
 
-    private void onPlayerDisconnected(UUID uuid, String ip) {
-        getLogger().info("Player disconnected: " + uuid + " @ " + ip);
+    private void onPlayerDisconnected(UUID uuid, String ip, String authUser) {
+        getLogger().info("Player disconnected: " + authUser + "(" +  uuid + ") @ " + ip);
+        // Remove authentication
+        this.getUserManager().unsetAuthenticated(uuid.toString());
         // TODO: Notify your local proxy/whitelist app
     }
 }
