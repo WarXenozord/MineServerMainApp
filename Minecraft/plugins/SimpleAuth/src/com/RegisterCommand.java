@@ -38,6 +38,11 @@ public class RegisterCommand implements CommandExecutor {
         String user = args[0];
         String pass = args[1];
 
+        if (user.equalsIgnoreCase("Not-Logged")) {
+            p.sendMessage("§cReserved username.");
+            return true;
+        }
+
         if (plugin.getUserManager().userExists(user)) {
             p.sendMessage("§cUser already exists.");
             return true;

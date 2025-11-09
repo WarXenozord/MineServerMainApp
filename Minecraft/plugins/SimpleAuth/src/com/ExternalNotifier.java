@@ -7,7 +7,8 @@ import java.util.Map;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
-import org.json.JSONObject;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 
 public class ExternalNotifier {
     private final Plugin plugin;
@@ -31,21 +32,22 @@ public class ExternalNotifier {
 
     private void doNotify(String event, String ip, String playerName, int attempt) {
         try {
-            JSONObject body = new JSONObject(Map.of(
-                "event", event,
-                "player", playerName,
-                "ip", ip,
-                "timestamp", System.currentTimeMillis()
-            ));
+            JsonObject body = new JsonObject();
+            body.addProperty("event", event);
+            body.addProperty("player", playerName);
+            body.addProperty("ip", ip);
+            body.addProperty("timestamp", System.currentTimeMillis());
+
             HttpRequest req = HttpRequest.newBuilder()
                     .uri(URI.create(supervisorUrl))
                     .header("Content-Type", "application/json")
                     .timeout(Duration.ofSeconds(5))
                     .POST(HttpRequest.BodyPublishers.ofString(body.toString()))
                     .build();
+
             HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString());
             if (resp.statusCode() >= 200 && resp.statusCode() < 300) return; // success
-            // non-2xx -> retry
+
             if (attempt < maxRetries) {
                 Thread.sleep(1000L * (attempt + 1));
                 doNotify(event, ip, playerName, attempt + 1);
@@ -66,15 +68,20 @@ public class ExternalNotifier {
     public void pushCurrentOnline(String endpointSuffix) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
-                var arr = new org.json.JSONArray();
+                JsonArray arr = new JsonArray();
                 for (Player p : Bukkit.getOnlinePlayers()) {
-                    var o = new JSONObject();
-                    o.put("name", p.getName());
+                    JsonObject o = new JsonObject();
+                    o.addProperty("name", p.getName());
                     var addr = p.getAddress();
-                    o.put("ip", addr == null ? "" : addr.getAddress().getHostAddress());
-                    arr.put(o);
+                    o.addProperty("ip", addr == null ? "" : addr.getAddress().getHostAddress());
+                    arr.add(o);
                 }
-                JSONObject body = new JSONObject(Map.of("event", "reconcile", "players", arr, "timestamp", System.currentTimeMillis()));
+
+                JsonObject body = new JsonObject();
+                body.addProperty("event", "reconcile");
+                body.add("players", arr);
+                body.addProperty("timestamp", System.currentTimeMillis());
+
                 String url = supervisorUrl; // or supervisorUrl + "/reconcile"
                 HttpRequest req = HttpRequest.newBuilder()
                         .uri(URI.create(url))
@@ -82,6 +89,7 @@ public class ExternalNotifier {
                         .POST(HttpRequest.BodyPublishers.ofString(body.toString()))
                         .timeout(Duration.ofSeconds(5))
                         .build();
+
                 client.send(req, HttpResponse.BodyHandlers.discarding());
             } catch (Exception ex) {
                 plugin.getLogger().warning("Reconcile push failed: " + ex.getMessage());

@@ -1,15 +1,17 @@
 package com.simpleauth;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.sun.net.httpserver.*;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
-import org.json.JSONArray;
-import org.json.JSONObject;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.Executors;
 
 public class LocalApiServer {
     private final Plugin plugin;
@@ -19,18 +21,18 @@ public class LocalApiServer {
         this.plugin = plugin;
         server = HttpServer.create(new InetSocketAddress(bind, port), 0);
         server.createContext("/online", this::handleOnline);
-        server.setExecutor(java.util.concurrent.Executors.newFixedThreadPool(2));
+        server.setExecutor(Executors.newFixedThreadPool(2));
     }
 
     private void handleOnline(HttpExchange ex) throws IOException {
-        JSONArray arr = new JSONArray();
+        JsonArray arr = new JsonArray();
         for (Player p : Bukkit.getOnlinePlayers()) {
-            JSONObject o = new JSONObject();
+            JsonObject o = new JsonObject();
             String authUser = ((SimpleAuth) plugin).getUserManager().getAuthUser(p);
-            o.put("name", authUser != null ? authUser : p.getName());
+            o.addProperty("name", authUser != null ? authUser : "Not-Logged");
             var addr = p.getAddress();
-            o.put("ip", addr == null ? "" : addr.getAddress().getHostAddress());
-            arr.put(o);
+            o.addProperty("ip", addr == null ? "" : addr.getAddress().getHostAddress());
+            arr.add(o);
         }
 
         byte[] resp = arr.toString().getBytes(StandardCharsets.UTF_8);
@@ -41,6 +43,13 @@ public class LocalApiServer {
         }
     }
 
-    public void start() { server.start(); plugin.getLogger().info("Local API started on " + server.getAddress()); }
-    public void stop() { server.stop(0); plugin.getLogger().info("Local API stopped"); }
+    public void start() {
+        server.start();
+        plugin.getLogger().info("Local API started on " + server.getAddress());
+    }
+
+    public void stop() {
+        server.stop(0);
+        plugin.getLogger().info("Local API stopped");
+    }
 }

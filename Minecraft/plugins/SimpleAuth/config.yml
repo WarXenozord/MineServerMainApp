@@ -4,5 +4,5 @@ supervisor:
   timeoutSeconds: 5
 
 local:
-  bind: "127.0.0.1"
+  bind: "localhost"
   port: 27111

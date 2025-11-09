@@ -22,14 +22,13 @@ ADVENTURE_KEY_JAR="$ROOT_DIR/plugins/adventure-key-4.17.0.jar"
 ANOTATIONS_JAR="$ROOT_DIR/plugins/annotations-23.0.0.jar"
 BUNGEE_JAR="$ROOT_DIR/plugins/BungeeCord.jar"
 GUAVA_JAR="$ROOT_DIR/plugins/guava-33.5.0-jre.jar"
-JSON_JAR="$ROOT_DIR/plugins/json-20230227.jar"
 
 echo "=== Building SimpleAuth Plugin ==="
 
 if [ -d "$PLUGIN_SRC/src" ]; then
   mkdir -p "$PLUGIN_OUT"
   # Compile
-  javac -cp "$PAPER_API:$ADVENTURE_JAR:$ADVENTURE_KEY_JAR:$BUNGEE_JAR:$GUAVA_JAR:$ANOTATIONS_JAR:$JAR_PATH:$JSON_JAR" \
+  javac -cp "$PAPER_API:$ADVENTURE_JAR:$ADVENTURE_KEY_JAR:$BUNGEE_JAR:$GUAVA_JAR:$ANOTATIONS_JAR:$JAR_PATH" \
   -d "$PLUGIN_OUT" "$PLUGIN_SRC/src/com"/*.java
   
   # Copy plugin.yml

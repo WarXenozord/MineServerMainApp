@@ -8,6 +8,7 @@ import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.io.IOException;
 
 public class SimpleAuth extends JavaPlugin {
 
@@ -36,6 +37,16 @@ public class SimpleAuth extends JavaPlugin {
 
         // Start polling online players for IP changes
         Bukkit.getScheduler().runTaskTimer(this, this::pollPlayers, POLL_INTERVAL, POLL_INTERVAL);
+
+        try {
+            String bind = getConfig().getString("local.bind", "127.0.0.1");
+            int port = getConfig().getInt("local.port", 27111);
+
+            LocalApiServer api = new LocalApiServer(this, bind, port);
+            api.start();
+        } catch (IOException e) {
+            getLogger().warning("Failed to start local API: " + e.getMessage());
+        }
     }
 
     @Override
