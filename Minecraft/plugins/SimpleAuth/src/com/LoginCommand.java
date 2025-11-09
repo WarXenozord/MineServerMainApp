@@ -23,6 +23,20 @@ public class LoginCommand implements CommandExecutor {
         String user = args[0];
         String pass = args[1];
 
+        if (plugin.getUserManager().isUserAlreadyLogged(user)) {
+            p.sendMessage("§cThat account is already logged in.");
+            return true;
+        }
+
+        // Handle existing session for this player
+        if (plugin.getUserManager().isAuthenticated(p)) {
+            String oldUser = plugin.getUserManager().getAuthUser(p);
+            if (oldUser != null && !oldUser.equals(user)) {
+                plugin.getUserManager().unsetAuthenticated(p.getUniqueId().toString());
+                p.sendMessage("§eYou were logged out from '" + oldUser + "'.");
+            }
+        }
+
         if (plugin.getUserManager().checkCredentials(user, pass)) {
             plugin.getUserManager().setAuthenticated(p, user);
             plugin.getUserManager().loadPlayerData(p, user);

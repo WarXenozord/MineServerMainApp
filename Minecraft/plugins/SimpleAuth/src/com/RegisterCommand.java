@@ -15,13 +15,23 @@ public class RegisterCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         if (!(sender instanceof Player p)) return false;
-        if (args.length != 2) {
-            p.sendMessage("§cUsage: /register <user> <pass>");
+
+        // Must be logged in first
+        if (!plugin.getUserManager().isAuthenticated(p)) {
+            p.sendMessage("§cYou must be logged in to use /register.");
             return true;
         }
 
-        if (!plugin.getUserManager().isRegistrationOpen()) {
-            p.sendMessage("§cRegistration is closed.");
+        // Must be the superuser account
+        String loggedUser = plugin.getUserManager().getAuthUser(p);
+        if (!loggedUser.equalsIgnoreCase(UserManager.SUPERUSER_NAME)) {
+            p.sendMessage("§cOnly the admin can register new users.");
+            return true;
+        }
+
+        // Syntax check
+        if (args.length != 2) {
+            p.sendMessage("§cUsage: /register <user> <pass>");
             return true;
         }
 
@@ -34,7 +44,7 @@ public class RegisterCommand implements CommandExecutor {
         }
 
         plugin.getUserManager().createUser(user, pass);
-        p.sendMessage("§aUser created. Use /login to log in.");
+        p.sendMessage("§aUser created successfully!");
         return true;
     }
 }

