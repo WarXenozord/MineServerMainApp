@@ -3,15 +3,12 @@ dotenv.config({ path: process.env.NODE_ENV === "production" ? "/etc/msu/.env" : 
 
 import express from "express";
 import crypto from "crypto";
+import axios from "axios";
 
 const app = express();
 app.use(express.json());
 
-let isStarting = false;
-let isRunning = true;
-let bootStart = 0;
-
-// --- your secret (shared with Auth Server only) ---
+// --- Secret (shared with Auth Server only) ---
 const AUTH_SECRET = process.env.AUTH_SECRET || "dev-super-secret"; 
 
 // Utility: simple auth header check
@@ -37,21 +34,23 @@ function verifyAuth(req, res, next) {
   next();
 }
 
-// --- STATUS ENDPOINT ---
-app.get("/status", (req, res) => {
-  if (isRunning) {
-    console.log("Got status request");
+app.get("/status", async (req, res) => {
+  try {
+    // Query the plugin API
+    const response = await axios.get("http://127.0.0.1:27111/online", { timeout: 1500 });
+    const players = response.data.players.map(p => p.name);
+    const minePort = response.data.port || "24111"; // fallback
+
     return res.json({
       ok: true,
-      port: "25565",
-      players: ["Steve", "Alex"],
+      port: minePort,
+      players,
     });
+  } catch (err) {
+    // if failed to reach API
+    console.error("Status check failed:", err.message);
+    return res.json({ ok: false, message: "server offline" });
   }
-  if (isStarting) {
-    const elapsed = ((Date.now() - bootStart) / 1000).toFixed(1);
-    return res.json({ ok: false, message: `booting (${elapsed}s)` });
-  }
-  res.json({ ok: false, message: "server offline" });
 });
 
 // --- AUTHORIZE ENDPOINT (called by Auth Server) ---
@@ -73,6 +72,8 @@ app.post("/authorize", verifyAuth, async (req, res) => {
     res.status(500).json({ ok: false, error: "internal" });
   }
 });
+
+// TODO: create /logged api to check if authorized players logged after a 10 minute window
 
 // --- LOCALHOST ONLY DEAUTHORIZE ---
 function requireLocalhost(req, res, next) {

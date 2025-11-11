@@ -40,13 +40,6 @@ if [ -d "$PLUGIN_SRC/src" ]; then
   else
     echo "⚠️ config.yml not found in $PLUGIN_SRC, plugin will fail on startup"
   fi
-  
-  # Copy users.yml
-  if [ -f "$PLUGIN_SRC/users.yml" ]; then
-    cp "$PLUGIN_SRC/users.yml" "$PLUGIN_OUT/"
-  else
-    echo "⚠️ users.yml not found in $PLUGIN_SRC, plugin will fail on startup"
-  fi
 
   # Package
   jar cf "$PLUGIN_JAR" -C "$PLUGIN_OUT" .

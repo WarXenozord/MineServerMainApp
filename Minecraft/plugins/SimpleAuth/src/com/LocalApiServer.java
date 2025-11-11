@@ -24,7 +24,8 @@ public class LocalApiServer {
         server.setExecutor(Executors.newFixedThreadPool(2));
     }
 
-    private void handleOnline(HttpExchange ex) throws IOException {
+   private void handleOnline(HttpExchange ex) throws IOException {
+        JsonObject result = new JsonObject();
         JsonArray arr = new JsonArray();
         for (Player p : Bukkit.getOnlinePlayers()) {
             JsonObject o = new JsonObject();
@@ -35,7 +36,10 @@ public class LocalApiServer {
             arr.add(o);
         }
 
-        byte[] resp = arr.toString().getBytes(StandardCharsets.UTF_8);
+        result.add("players", arr);
+        result.addProperty("port", Bukkit.getPort()); // 👈 add actual MC server port
+
+        byte[] resp = result.toString().getBytes(StandardCharsets.UTF_8);
         ex.getResponseHeaders().add("Content-Type", "application/json; charset=utf-8");
         ex.sendResponseHeaders(200, resp.length);
         try (OutputStream os = ex.getResponseBody()) {

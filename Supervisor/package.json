@@ -12,10 +12,11 @@
   },
   "dependencies": {
     "@aws-sdk/client-lambda": "^3.925.0",
+    "axios": "^1.13.2",
     "cross-env": "^10.1.0",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "install": "^0.13.0",
-    "npm": "^11.6.2"
+    "npm": "^11.6.0"
   }
 }
