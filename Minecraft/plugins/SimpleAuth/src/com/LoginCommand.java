@@ -31,19 +31,20 @@ public class LoginCommand implements CommandExecutor {
             return true;
         }
 
-        // If this player is already authenticated, revert their privileges first
-        if (plugin.getUserManager().isAuthenticated(p)) {
-            String oldUser = plugin.getUserManager().getAuthUser(p);
-            if (oldUser != null) {
-                revokeAdminPrivileges(p); // remove admin before switching user
-                plugin.getUserManager().unsetAuthenticated(p.getUniqueId().toString());
-                p.sendMessage("§eYou were logged out from '" + oldUser + "'.");
-            }
-        }
-
         if (plugin.getUserManager().checkCredentials(user, pass)) {
+            // If this player is already authenticated, revert their privileges first
+            if (plugin.getUserManager().isAuthenticated(p)) {
+                String oldUser = plugin.getUserManager().getAuthUser(p);
+                if (oldUser != null) {
+                    revokeAdminPrivileges(p); // remove admin before switching user
+                    plugin.getUserManager().unsetAuthenticated(p.getUniqueId().toString());
+                    p.sendMessage("§eYou were logged out from '" + oldUser + "'.");
+                }
+            }
+
             plugin.getUserManager().setAuthenticated(p, user);
             plugin.getUserManager().loadPlayerData(p, user);
+            
             p.sendMessage("§aLogged in as " + user);
 
             // Grant admin powers only if this is the superuser

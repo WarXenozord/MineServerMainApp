@@ -7,6 +7,9 @@ import net.skinsrestorer.api.exception.MineSkinException;
 import net.skinsrestorer.api.property.InputDataResult;
 import net.skinsrestorer.api.storage.PlayerStorage;
 import net.skinsrestorer.api.storage.SkinStorage;
+import net.skinsrestorer.api.PropertyUtils;
+import net.skinsrestorer.api.property.SkinProperty;
+
 
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -99,6 +102,17 @@ public class UserManager {
         String user = getAuthUser(p);
         data.set("users." + user + ".lastLocation", serializeLocation(p.getLocation()));
         data.set("users." + user + ".inventory", InventoryUtils.toBase64(p.getInventory()));
+        try {
+            SkinsRestorer api = SkinsRestorerProvider.get();
+            PlayerStorage playerStorage = api.getPlayerStorage();
+            Optional<SkinProperty> property = playerStorage.getSkinForPlayer(p.getUniqueId(), p.getName());
+            if (property.isPresent()) {
+                String textureUrl = PropertyUtils.getSkinTextureUrl(property.get());
+                data.set("users." + user + ".skinUrl", textureUrl);
+            }
+        } catch (DataRequestException e) {
+            e.printStackTrace();
+        }
         save();
     }
 
@@ -114,7 +128,13 @@ public class UserManager {
         p.setAllowFlight(false);
 
         // Restore skin
-        SkinUtil.setAndApplySkin(p, "https://minesk.in/846f22b12b0142c693b41aec6b5416ef");
+        String savedSkinUrl = data.getString("users." + user + ".skinUrl");
+        if (savedSkinUrl != null && !savedSkinUrl.isEmpty()) {
+            SkinUtil.setAndApplySkin(p, savedSkinUrl);
+            p.sendMessage("§aRestored saved skin for user " + user);
+        } else {
+            p.sendMessage("§eNo saved skin found, using default.");
+        }
     }
 
     public class SkinUtil {
@@ -139,7 +159,6 @@ public class UserManager {
 
                 // apply immediately
                 api.getSkinApplier(Player.class).applySkin(player);
-                player.sendMessage("§aSkin applied: " + input);
 
             } catch (DataRequestException | MineSkinException e) {
                 e.printStackTrace();
