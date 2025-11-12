@@ -3,11 +3,10 @@ package com.simpleauth;
 import net.skinsrestorer.api.SkinsRestorer;
 import net.skinsrestorer.api.SkinsRestorerProvider;
 import net.skinsrestorer.api.exception.DataRequestException;
+import net.skinsrestorer.api.exception.MineSkinException;
 import net.skinsrestorer.api.property.InputDataResult;
 import net.skinsrestorer.api.storage.PlayerStorage;
 import net.skinsrestorer.api.storage.SkinStorage;
-import net.skinsrestorer.api.exception.MineSkinException;
-import org.bukkit.entity.Player;
 
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -115,39 +114,42 @@ public class UserManager {
         p.setAllowFlight(false);
 
         // Restore skin
-        SkinUtil.setAndApplySkin(p, "Notch");
+        SkinUtil.setAndApplySkin(p, "https://minesk.in/846f22b12b0142c693b41aec6b5416ef");
     }
 
     public class SkinUtil {
 
-    public static void setAndApplySkin(Player player, String skinName) {
-        SkinsRestorer api = SkinsRestorerProvider.get();
+        public static void setAndApplySkin(Player player, String input) {
+            SkinsRestorer api = SkinsRestorerProvider.get();
 
-        try {
-            SkinStorage skinStorage = api.getSkinStorage();
-            PlayerStorage playerStorage = api.getPlayerStorage();
+            try {
+                SkinStorage skinStorage = api.getSkinStorage();
+                PlayerStorage playerStorage = api.getPlayerStorage();
 
-            // Find or create the skin data for the desired skin name
-            Optional<InputDataResult> result = skinStorage.findOrCreateSkinData(skinName);
+                // findOrCreateSkinData supports player names AND URLs
+                Optional<InputDataResult> result = skinStorage.findOrCreateSkinData(input);
 
-            if (result.isEmpty()) {
-                player.sendMessage("§cSkin not found: " + skinName);
-                return;
+                if (result.isEmpty()) {
+                    player.sendMessage("§cSkin not found: " + input);
+                    return;
+                }
+
+                // store skin ID for player
+                playerStorage.setSkinIdOfPlayer(player.getUniqueId(), result.get().getIdentifier());
+
+                // apply immediately
+                api.getSkinApplier(Player.class).applySkin(player);
+                player.sendMessage("§aSkin applied: " + input);
+
+            } catch (DataRequestException | MineSkinException e) {
+                e.printStackTrace();
+                player.sendMessage("§cFailed to set skin: " + e.getMessage());
+            } catch (Exception e) {
+                e.printStackTrace();
+                player.sendMessage("§cUnexpected error while applying skin.");
             }
-
-            // Associate this skin with the player’s UUID
-            playerStorage.setSkinIdOfPlayer(player.getUniqueId(), result.get().getIdentifier());
-
-            // Instantly apply it (no reconnect needed)
-            api.getSkinApplier(Player.class).applySkin(player);
-
-            player.sendMessage("§aSkin applied: " + skinName);
-        } catch (DataRequestException | MineSkinException e) {
-            e.printStackTrace();
-            player.sendMessage("§cFailed to set skin: " + e.getMessage());
         }
     }
-}
 
     public void saveAll() {
         for (Player p : plugin.getServer().getOnlinePlayers()) savePlayerData(p);
