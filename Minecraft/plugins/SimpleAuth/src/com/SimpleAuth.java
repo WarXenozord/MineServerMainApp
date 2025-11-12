@@ -5,6 +5,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.http.*;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -14,6 +17,13 @@ public class SimpleAuth extends JavaPlugin {
 
     private static SimpleAuth instance;
     private UserManager userManager;
+
+    private static final String SUPERVISOR_URL = "http://127.0.0.1:5001";
+    // Shared HttpClient
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .version(HttpClient.Version.HTTP_1_1)
+            .connectTimeout(Duration.ofSeconds(3))
+            .build();
 
     // Map to track currently connected players and their IPs
     private final Map<UUID, String> onlinePlayerIps = new HashMap<>();
@@ -100,13 +110,37 @@ public class SimpleAuth extends JavaPlugin {
 
     public void onPlayerLogged(UUID uuid, String ip, String authUser) {
         getLogger().info("Player logged: " + authUser + "(" +  uuid + ") @ " + ip);
-        // TODO: Call your local proxy/whitelist app here
+        notifySupervisor("/logged", authUser);
     }
 
     private void onPlayerDisconnected(UUID uuid, String ip, String authUser) {
         getLogger().info("Player disconnected: " + authUser + "(" +  uuid + ") @ " + ip);
         // Remove authentication
         this.getUserManager().unsetAuthenticated(uuid.toString());
-        // TODO: Notify your local proxy/whitelist app
+        notifySupervisor("/deauthorize", authUser);
+    }
+
+    private void notifySupervisor(String endpoint, String username) {
+        if (username == null || username.isEmpty()) return;
+        Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
+            try {
+                String url = SUPERVISOR_URL + endpoint;
+                String json = "{\"username\":\"" + username + "\"}";
+
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(url))
+                        .timeout(Duration.ofSeconds(5))
+                        .header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString(json))
+                        .build();
+
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                    getLogger().warning("Supervisor " + endpoint + " failed (" + response.statusCode() + "): " + response.body());
+                }
+            } catch (Exception e) {
+                getLogger().warning("Error calling supervisor " + endpoint + ": " + e.getMessage());
+            }
+        });
     }
 }

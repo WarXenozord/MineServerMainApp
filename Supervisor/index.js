@@ -42,7 +42,15 @@ function verifyAuth(req, res, next) {
 // --- Middleware: localhost restriction ---
 function requireLocalhost(req, res, next) {
   const ip = req.ip || req.connection.remoteAddress;
-  if (ip === "127.0.0.1" || ip === "::1") return next();
+  console.log("Incoming IP:", ip);
+
+  // normalize IPv6-mapped IPv4 addresses
+  const normalized = ip.replace(/^::ffff:/, "");
+
+  if (normalized === "127.0.0.1" || normalized === "::1") {
+    return next();
+  }
+
   res.status(403).json({ ok: false, error: "forbidden" });
 }
 
