@@ -81,17 +81,17 @@ app.post("/authorize", verifyAuth, async (req, res) => {
   const timer = setTimeout(() => {
     const entry = authorized.get(username);
     if (entry && !entry.logged) {
-      console.log(`⏳ Authorization for ${username} expired (no login after 5 min)`);
+      console.log(`⏳ Authorization for ${username} expired (no login after ${AUTH_WINDOW_MS/60000} min)`);
       authorized.delete(username);
       // 👇 Insert whitelist/firewall REMOVE logic here
     }
   }, AUTH_WINDOW_MS);
 
   authorized.set(username, { ip, logged: false, timer, graceTimer: null });
-  console.log(`✅ Authorized ${username} (${ip}) for 5 minutes`);
+  console.log(`✅ Authorized ${username} (${ip}) for ${AUTH_WINDOW_MS/60000} minutes`);
 
   // 👇 Insert whitelist/firewall ADD logic here
-  return res.json({ ok: true, message: `Player ${username} authorized for 5 minutes` });
+  return res.json({ ok: true, message: `Player ${username} authorized for ${AUTH_WINDOW_MS/60000} minutes` });
 });
 
 // --- /logged (called by the MineServer when player logs in) ---
