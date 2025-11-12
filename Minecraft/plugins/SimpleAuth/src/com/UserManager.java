@@ -1,5 +1,14 @@
 package com.simpleauth;
 
+import net.skinsrestorer.api.SkinsRestorer;
+import net.skinsrestorer.api.SkinsRestorerProvider;
+import net.skinsrestorer.api.exception.DataRequestException;
+import net.skinsrestorer.api.property.InputDataResult;
+import net.skinsrestorer.api.storage.PlayerStorage;
+import net.skinsrestorer.api.storage.SkinStorage;
+import net.skinsrestorer.api.exception.MineSkinException;
+import org.bukkit.entity.Player;
+
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.Location;
@@ -9,6 +18,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.Optional;
 
 public class UserManager {
     private final SimpleAuth plugin;
@@ -103,7 +113,41 @@ public class UserManager {
             p.teleport(plugin.getServer().getWorlds().get(0).getSpawnLocation());
         p.setFlying(false);
         p.setAllowFlight(false);
+
+        // Restore skin
+        SkinUtil.setAndApplySkin(p, "Notch");
     }
+
+    public class SkinUtil {
+
+    public static void setAndApplySkin(Player player, String skinName) {
+        SkinsRestorer api = SkinsRestorerProvider.get();
+
+        try {
+            SkinStorage skinStorage = api.getSkinStorage();
+            PlayerStorage playerStorage = api.getPlayerStorage();
+
+            // Find or create the skin data for the desired skin name
+            Optional<InputDataResult> result = skinStorage.findOrCreateSkinData(skinName);
+
+            if (result.isEmpty()) {
+                player.sendMessage("§cSkin not found: " + skinName);
+                return;
+            }
+
+            // Associate this skin with the player’s UUID
+            playerStorage.setSkinIdOfPlayer(player.getUniqueId(), result.get().getIdentifier());
+
+            // Instantly apply it (no reconnect needed)
+            api.getSkinApplier(Player.class).applySkin(player);
+
+            player.sendMessage("§aSkin applied: " + skinName);
+        } catch (DataRequestException | MineSkinException e) {
+            e.printStackTrace();
+            player.sendMessage("§cFailed to set skin: " + e.getMessage());
+        }
+    }
+}
 
     public void saveAll() {
         for (Player p : plugin.getServer().getOnlinePlayers()) savePlayerData(p);

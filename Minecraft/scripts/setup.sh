@@ -22,13 +22,14 @@ ADVENTURE_KEY_JAR="$ROOT_DIR/plugins/adventure-key-4.17.0.jar"
 ANOTATIONS_JAR="$ROOT_DIR/plugins/annotations-23.0.0.jar"
 BUNGEE_JAR="$ROOT_DIR/plugins/BungeeCord.jar"
 GUAVA_JAR="$ROOT_DIR/plugins/guava-33.5.0-jre.jar"
+SKINSRESTORER_API_JAR="$ROOT_DIR/plugins/skinsrestorer-api-15.5.2.jar"
 
 echo "=== Building SimpleAuth Plugin ==="
 
 if [ -d "$PLUGIN_SRC/src" ]; then
   mkdir -p "$PLUGIN_OUT"
   # Compile
-  javac -cp "$PAPER_API:$ADVENTURE_JAR:$ADVENTURE_KEY_JAR:$BUNGEE_JAR:$GUAVA_JAR:$ANOTATIONS_JAR:$JAR_PATH" \
+  javac -cp "$PAPER_API:$ADVENTURE_JAR:$ADVENTURE_KEY_JAR:$BUNGEE_JAR:$GUAVA_JAR:$ANOTATIONS_JAR:$JAR_PATH:$SKINSRESTORER_API_JAR" \
   -d "$PLUGIN_OUT" "$PLUGIN_SRC/src/com"/*.java
   
   # Copy plugin.yml
@@ -48,6 +49,11 @@ if [ -d "$PLUGIN_SRC/src" ]; then
 else
   echo "⚠️  SimpleAuth source folder not found at $PLUGIN_SRC/src"
 fi
+
+# --- COPY SKINRESTORER TO SERVER --- #
+SKIN_PLUGIN_SRC="$ROOT_DIR/plugins/SkinsRestorer"
+SKIN_PLUGIN_JAR="$SERVER_DIR/plugins/SkinsRestorer.jar"
+cp "$SKIN_PLUGIN_SRC/SkinsRestorer.jar" "$SKIN_PLUGIN_JAR"
 
 # --- FIRST START (to generate configs) ---
 cd "$SERVER_DIR"
