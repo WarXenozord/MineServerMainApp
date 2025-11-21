@@ -108,21 +108,55 @@ app.post("/logged", requireLocalhost, (req, res) => {
   if (!username)
     return res.status(400).json({ ok: false, error: "missing username" });
 
-  const entry = authorized.get(username);
+  const parsed = getRoot(username);
+  if (!parsed)
+    return res.status(400).json({ ok: false, error: "invalid alias format" });
+
+  const { root, aliasNum } = parsed;
+
+  const entry = authorized.get(root);
   if (!entry)
     return res.status(404).json({ ok: false, error: "not authorized" });
 
-  if (entry.logged)
-    return res.json({ ok: true, message: "already logged" });
+  // Initialize alias tracking
+  if (!entry.aliases) entry.aliases = { 0: false, 1: false, 2: false };
 
-  entry.logged = true;
+  // Already logged?
+  if (entry.aliases[aliasNum]) {
+    return res.json({ ok: true, message: "alias already logged" });
+  }
+
+  // Enforce max 3 total (root, -1, -2)
+  const activeCount = Object.values(entry.aliases).filter(Boolean).length;
+  if (activeCount >= 3)
+    return res.status(403).json({ ok: false, error: "alias limit reached" });
+
+  // Mark alias active
+  entry.aliases[aliasNum] = true;
+
+  // Clear root-wide timers
   clearTimeout(entry.timer);
   clearTimeout(entry.graceTimer);
-  authorized.set(username, entry);
 
-  console.log(`🎮 Player ${username} logged in — authorization timer cleared`);
-  return res.json({ ok: true, message: `Player ${username} login confirmed` });
+  authorized.set(root, entry);
+
+  console.log(`🎮 Player alias ${username} logged in as ${root}`);
+  return res.json({
+    ok: true,
+    message: `Alias ${username} confirmed for root ${root}`
+  });
 });
+
+function getRoot(username) {
+  const match = username.match(/^([A-Za-z0-9_]+)(?:-(\d))?$/);
+  if (!match) return null;
+
+  const root = match[1];
+  const aliasNum = match[2] ? parseInt(match[2], 10) : 0;
+
+  if (aliasNum > 2) return null; // only allow -1 and -2
+  return { root, aliasNum };
+}
 
 // --- /deauthorize (called locally when player disconnects) ---
 app.post("/deauthorize", requireLocalhost, async (req, res) => {
