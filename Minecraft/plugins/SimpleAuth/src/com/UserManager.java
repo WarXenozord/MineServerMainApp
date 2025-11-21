@@ -181,16 +181,23 @@ public class UserManager {
             e.printStackTrace();
         }
     }
-
+    
     private String serializeLocation(Location loc) {
-        return String.format("%s,%f,%f,%f", loc.getWorld().getName(), loc.getX(), loc.getY(), loc.getZ());
+        return String.join(";",
+            loc.getWorld().getName(),
+            Double.toString(loc.getX()),
+            Double.toString(loc.getY()),
+            Double.toString(loc.getZ())
+        );
     }
 
     private Location deserializeLocation(String s) {
-        String[] p = s.split(",");
-        return new Location(plugin.getServer().getWorld(p[0]),
-                Double.parseDouble(p[1]),
-                Double.parseDouble(p[2]),
-                Double.parseDouble(p[3]));
+        String[] p = s.split(";");
+        return new Location(
+            plugin.getServer().getWorld(p[0]),
+            Double.parseDouble(p[1]),
+            Double.parseDouble(p[2]),
+            Double.parseDouble(p[3])
+        );
     }
 }
