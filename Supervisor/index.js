@@ -5,6 +5,8 @@ import express from "express";
 import crypto from "crypto";
 import axios from "axios";
 
+import { turnOff } from "./Util/shutdown.js";
+
 const app = express();
 app.use(express.json());
 
