@@ -21,7 +21,7 @@ if [[ "$OS" == *"linux"* ]]; then
   if ! command -v java &> /dev/null; then
     echo "Java not found, installing OpenJDK 17..."
     sudo apt update -y
-    sudo apt install -y openjdk-17-jre-headless
+    sudo apt install -y openjdk-17
   fi
 elif [[ "$OS" == *"mingw"* ]] || [[ "$OS" == *"msys"* ]]; then
   echo "Checking Java (Windows/Git Bash)..."
