@@ -93,15 +93,18 @@ app.post("/authorize", verifyAuth, async (req, res) => {
     if (entry && !entry.logged) {
       console.log(`⏳ Authorization for ${username} expired (no login after ${AUTH_WINDOW_MS/60000} min)`);
       authorized.delete(username);
-      // 👇 Insert whitelist/firewall REMOVE logic here
+      invokeFirewallLambda("revoke", ip, username);
     }
   }, AUTH_WINDOW_MS);
 
   authorized.set(username, { ip, logged: false, timer, graceTimer: null });
   console.log(`✅ Authorized ${username} (${ip}) for ${AUTH_WINDOW_MS/60000} minutes`);
 
-  // 👇 Insert whitelist/firewall ADD logic here
-  return res.json({ ok: true, message: `Player ${username} authorized for ${AUTH_WINDOW_MS/60000} minutes` });
+  const result = await invokeFirewallLambda("authorize", ip, username);
+  if(result.ok)
+    return res.json({ ok: true, message: `Player ${username} authorized for ${AUTH_WINDOW_MS/60000} minutes` });
+  else
+    return res.json({ ok: false, message: result.error });
 });
 
 // --- /logged (called by the MineServer when player logs in) ---
@@ -177,12 +180,12 @@ app.post("/deauthorize", requireLocalhost, async (req, res) => {
     if (e && !e.logged) {
       console.log(`⌛ Player ${username} grace period expired (not relogged)`);
       authorized.delete(username);
-      // 👇 Insert whitelist/firewall REMOVE logic here
+      invokeFirewallLambda("revoke", e.ip, username);
     }
   }, AUTH_WINDOW_MS);
 
   authorized.set(username, entry);
-  console.log(`🚪 Player ${username} disconnected — 5 min grace timer started`);
+  console.log(`🚪 Player ${username} disconnected — ${AUTH_WINDOW_MS/60000} min grace timer started`);
   return res.json({ ok: true, message: `Player ${username} grace timer started` });
 });
 
@@ -205,8 +208,8 @@ async function checkServerStatus() {
     // e.g., 3 consecutive empty checks (≈9 min)
     if (emptyCount >= 3) {
       console.log("🕒 Server empty for >" + (STATUS_INTERVAL_MS*3/(60*1000)).toString() + " min — initiating shutdown sequence...");
-      // 👇 Insert graceful shutdown / EC2 stop logic here
       emptyCount = 0;
+      turnOff();
     }
   } catch (err) {
     console.error("❌ Error checking MineServer status:", err.message);

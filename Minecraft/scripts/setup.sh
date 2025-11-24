@@ -81,7 +81,7 @@ if [ -f "$PROPERTIES_FILE" ]; then
   echo "Online-mode disabled."
 
   # Set world seed
-  SEED_VALUE="YOUR_SEED_HERE"
+  SEED_VALUE="46182117"
   if grep -q "^level-seed=" "$PROPERTIES_FILE"; then
     if [[ "$OS" == *"mingw"* ]] || [[ "$OS" == *"msys"* ]]; then
       sed -i "s/^level-seed=.*/level-seed=$SEED_VALUE/" "$PROPERTIES_FILE"
