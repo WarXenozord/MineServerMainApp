@@ -1,8 +1,8 @@
 {
+  "type": "module",
   "scripts": {
     "build:paper": "bash ./Minecraft/scripts/pre-setup.sh && node ./Minecraft/build-paper.js",
     "setup:server": "npm run build:paper && bash ./Minecraft/scripts/setup.sh",
-    "config:server" : "bash ./Minecraft/scripts/config.sh",
     "run:server" : "bash ./Minecraft/scripts/run-server.sh"
   }
 }
