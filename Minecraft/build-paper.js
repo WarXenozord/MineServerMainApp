@@ -21,9 +21,9 @@ async function getLatestBuild() {
 
 async function downloadPaper(build) {
   const url = `https://api.papermc.io/v2/projects/paper/versions/${VERSION}/builds/${build}/downloads/paper-${VERSION}-${build}.jar`;
-  const dest = './minecraft/server/paper.jar';
-  fs.mkdirSync('./minecraft/server', { recursive: true });
-  
+  const dest = './Minecraft/server/paper.jar';
+  fs.mkdirSync('./Minecraft/server', { recursive: true });
+
   console.log(`Downloading Paper build ${build}...`);
   return new Promise((resolve, reject) => {
     const file = fs.createWriteStream(dest);
