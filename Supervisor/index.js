@@ -208,8 +208,14 @@ async function checkServerStatus() {
 
     // e.g., 3 consecutive empty checks (≈9 min)
     if (emptyCount >= 3) {
-      console.log("🕒 Server empty for >" + (STATUS_INTERVAL_MS*3/(60*1000)).toString() + " min — initiating shutdown sequence...");
       emptyCount = 0;
+
+      if (hasActivePlayersOrTimers()) {
+        console.log("⛔ Shutdown skipped — players still authorized or grace timers active");
+        return;
+      }
+
+      console.log("🕒 No players & no timers — initiating shutdown");
       turnOff();
     }
   } catch (err) {
@@ -217,6 +223,25 @@ async function checkServerStatus() {
     emptyCount++;
   }
 }
+
+function hasActivePlayersOrTimers() {
+  for (const [user, entry] of authorized.entries()) {
+
+    // Any alias logged in?
+    if (entry.aliases && Object.values(entry.aliases).some(v => v)) {
+      return true;
+    }
+
+    // Authorization window still running?
+    if (entry.timer) return true;
+
+    // Grace window still running?
+    if (entry.graceTimer) return true;
+  }
+
+  return false;
+}
+
 
 setInterval(checkServerStatus, STATUS_INTERVAL_MS);
 
