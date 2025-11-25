@@ -6,6 +6,7 @@ import crypto from "crypto";
 import axios from "axios";
 
 import { turnOff } from "./Util/shutdown.js";
+import { invokeFirewallLambda } from "./Util/ip-whitelister.js";
 
 const app = express();
 app.use(express.json());
