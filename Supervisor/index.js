@@ -206,7 +206,7 @@ async function checkServerStatus() {
       else emptyCount = 0;
     }
 
-    // e.g., 3 consecutive empty checks (≈9 min)
+    // e.g., 3 consecutive empty checks
     if (emptyCount >= 3) {
       emptyCount = 0;
 
