@@ -108,8 +108,7 @@ app.post("/authorize", verifyAuth, async (req, res) => {
     return res.json({ ok: false, message: result.error });
 });
 
-// --- /logged (called by the MineServer when player logs in) ---
-app.post("/logged", requireLocalhost, (req, res) => {
+app.post("/deauthorize", requireLocalhost, async (req, res) => {
   const { username } = req.body || {};
   if (!username)
     return res.status(400).json({ ok: false, error: "missing username" });
@@ -122,72 +121,103 @@ app.post("/logged", requireLocalhost, (req, res) => {
 
   const entry = authorized.get(root);
   if (!entry)
-    return res.status(404).json({ ok: false, error: "not authorized" });
+    return res.json({ ok: true, message: `Player ${root} was not authorized` });
 
-  // Initialize alias tracking
+  // Ensure alias bag exists
   if (!entry.aliases) entry.aliases = { 0: false, 1: false, 2: false };
 
-  // Already logged?
-  if (entry.aliases[aliasNum]) {
-    return res.json({ ok: true, message: "alias already logged" });
+  // Mark this alias as disconnected
+  entry.aliases[aliasNum] = false;
+
+  const stillOnline = Object.values(entry.aliases).some(Boolean);
+  entry.logged = stillOnline;
+
+  // If ANY alias is online → no grace timer
+  if (stillOnline) {
+    authorized.set(root, entry);
+    console.log(`🚫 Alias ${username} disconnected — root ${root} still online`);
+    return res.json({
+      ok: true,
+      message: `Alias ${username} disconnected — root still online`
+    });
   }
 
-  // Enforce max 3 total (root, -1, -2)
-  const activeCount = Object.values(entry.aliases).filter(Boolean).length;
-  if (activeCount >= 3)
-    return res.status(403).json({ ok: false, error: "alias limit reached" });
+  // === Everyone offline → begin grace window ===
+  if (entry.graceTimer) clearTimeout(entry.graceTimer);
 
-  // Mark alias active
-  entry.aliases[aliasNum] = true;
+  entry.graceTimer = setTimeout(() => {
+    const e = authorized.get(root);
+    if (!e) return;
 
-  // Clear root-wide timers
-  clearTimeout(entry.timer);
-  clearTimeout(entry.graceTimer);
+    const online = e.aliases && Object.values(e.aliases).some(Boolean);
+    if (!online) {
+      console.log(`⌛ Grace expired for ${root}, revoking`);
+      authorized.delete(root);
+      invokeFirewallLambda("revoke", e.ip, root);
+    }
+  }, AUTH_WINDOW_MS);
 
   authorized.set(root, entry);
 
-  console.log(`🎮 Player alias ${username} logged in as ${root}`);
+  console.log(
+    `🚪 All aliases for ${root} offline — starting ${AUTH_WINDOW_MS / 60000} min grace`
+  );
+
   return res.json({
     ok: true,
-    message: `Alias ${username} confirmed for root ${root}`
+    message: `Root ${root} grace period started`
   });
 });
-
-function getRoot(username) {
-  const match = username.match(/^([A-Za-z0-9_]+)(?:-(\d))?$/);
-  if (!match) return null;
-
-  const root = match[1];
-  const aliasNum = match[2] ? parseInt(match[2], 10) : 0;
-
-  if (aliasNum > 2) return null; // only allow -1 and -2
-  return { root, aliasNum };
-}
 
 // --- /deauthorize (called locally when player disconnects) ---
 app.post("/deauthorize", requireLocalhost, async (req, res) => {
   const { username } = req.body || {};
   if (!username) return res.status(400).json({ ok: false, error: "missing username" });
 
-  const entry = authorized.get(username);
+  // Parse alias -> { root, aliasNum }
+  const parsed = getRoot(username);
+  if (!parsed)
+    return res.status(400).json({ ok: false, error: "invalid alias format" });
+
+  const { root, aliasNum } = parsed;
+
+  const entry = authorized.get(root);
   if (!entry)
-    return res.json({ ok: true, message: `Player ${username} was not authorized` });
+    return res.json({ ok: true, message: `Player ${root} was not authorized` });
 
-  entry.logged = false;
+  // No aliases stored? Shouldn't happen, but guard anyway.
+  if (!entry.aliases) entry.aliases = { 0: false, 1: false, 2: false };
 
+  // Mark this one alias as offline
+  entry.aliases[aliasNum] = false;
+
+  // Check if ANY alias still logged in
+  const stillOnline = Object.values(entry.aliases).some(v => v);
+  entry.logged = stillOnline;
+
+  // If anyone still online → don’t run grace timer
+  if (stillOnline) {
+    authorized.set(root, entry);
+    return res.json({ ok: true, message: `Alias ${username} disconnected — root still online` });
+  }
+
+  // Otherwise: everyone logged out → start grace timer
   if (entry.graceTimer) clearTimeout(entry.graceTimer);
+
   entry.graceTimer = setTimeout(() => {
-    const e = authorized.get(username);
-    if (e && !e.logged) {
-      console.log(`⌛ Player ${username} grace period expired (not relogged)`);
-      authorized.delete(username);
-      invokeFirewallLambda("revoke", e.ip, username);
+    const e = authorized.get(root);
+    // Root must still have no logged aliases
+    const online = e.aliases && Object.values(e.aliases).some(v => v);
+    if (e && !online) {
+      console.log(`⌛ Player ${root} grace expired (no relog)`);
+      authorized.delete(root);
+      invokeFirewallLambda("revoke", e.ip, root);
     }
   }, AUTH_WINDOW_MS);
 
-  authorized.set(username, entry);
-  console.log(`🚪 Player ${username} disconnected — ${AUTH_WINDOW_MS/60000} min grace timer started`);
-  return res.json({ ok: true, message: `Player ${username} grace timer started` });
+  authorized.set(root, entry);
+  console.log(`🚪 Player ${root} disconnected — ${AUTH_WINDOW_MS/60000} min grace timer started`);
+  return res.json({ ok: true, message: `Player ${root} grace timer started` });
 });
 
 // --- Periodic server check ---
